@@ -27,6 +27,7 @@ module Rack
   autoload :Sendfile,                   "rack/contrib/sendfile"
   autoload :Signals,                    "rack/contrib/signals"
   autoload :SimpleEndpoint,             "rack/contrib/simple_endpoint"
+  autoload :ThreadSafetyTester,         "rack/contrib/thread_safety_tester"
   autoload :TimeZone,                   "rack/contrib/time_zone"
   autoload :Evil,                       "rack/contrib/evil"
   autoload :Callbacks,                  "rack/contrib/callbacks"
