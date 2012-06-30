@@ -9,7 +9,8 @@ module Rack
   #     Hash => ['active_support/dependencies.rb'], # dev. mode related
   #     Set => 'active_support/dependencies.rb', # dev. mode related
   #     Array => ['active_support/dependencies.rb'] # dev. mode related
-  #   }
+  #   },
+  #   :skip_paths => [/\A\/assets\//] # skip /assets to keep things snappy
   #
   #   # or best inserted at the top of the middleware chain:
   #   config.middleware.insert_before 'ActionDispatch::Static', 'Rack::ThreadSafetyTester'
@@ -153,29 +154,39 @@ module Rack
 
     def initialize(app, options = {})
       super()
-      if options.kind_of?(Hash) && (whitelists = options[:whitelist]).kind_of?(Hash)
-        WATCHERS.each do |watcher|
-          if whitelist = whitelists[watcher.klass]
-            watcher.whitelist!(whitelist)
+      if options.kind_of?(Hash)
+        if (whitelists = options[:whitelist]).kind_of?(Hash)
+          WATCHERS.each do |watcher|
+            if whitelist = whitelists[watcher.klass]
+              watcher.whitelist!(whitelist)
+            end
           end
+        end
+
+        if (skip_paths = options[:skip_paths]).present?
+          @skip_paths = Array(skip_paths)
         end
       end
       @app = app
     end
 
     def call(env)
-      watch_usage!(env) do
-        status, headers, body = @app.call(env)
+      if @skip_paths && @skip_paths.any? {|skip_path| skip_path === env['PATH_INFO']}
+        @app.call(env)
+      else
+        watch_usage!(env) do
+          status, headers, body = @app.call(env)
 
-        # apparently this is how a proper rack middleware is supposed to look if one wants to avoid thread deadlocks while intercepting chunked responses
-        if body && body.respond_to?(:each)
-          new_body = []
-          body.each {|part| new_body << part}
-          body.close if body.respond_to?(:close)
-          body = new_body
+          # apparently this is how a proper rack middleware is supposed to look if one wants to avoid thread deadlocks while intercepting chunked responses
+          if body && body.respond_to?(:each)
+            new_body = []
+            body.each {|part| new_body << part}
+            body.close if body.respond_to?(:close)
+            body = new_body
+          end
+
+          [status, headers, body]
         end
-
-        [status, headers, body]
       end
     end
 
