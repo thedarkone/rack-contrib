@@ -46,8 +46,10 @@ module Rack
 
       def report_offenders!
         @file_whitelist = nil
-        @offenders.each do |culprit, (inst, backtrace)|
-          puts "[THREAD_SAFETY] Potential concurrent #{@klass.name} modification at: #{culprit}" unless ignore?(culprit, inst) || yield(inst)
+        with_logger_file do
+          @offenders.each do |culprit, (inst, backtrace)|
+            report_offender!(culprit, backtrace) unless ignore?(culprit, inst) || yield(inst)
+          end
         end
         @offenders.clear
       end
@@ -57,6 +59,23 @@ module Rack
       end
 
       private
+      def report_offender!(culprit, backtrace)
+        msg = "[THREAD_SAFETY] Potential concurrent #{@klass.name} modification at: #{culprit}"
+        puts msg
+        if @logger_file
+          @logger_file << msg << "\n" << backtrace.map {|line| "\t\t#{line}"}.join("\n") << "\n\n"
+        end
+      end
+
+      def with_logger_file
+        ::File.open("thread-safety-test.log", 'a') do |f|
+          @logger_file = f
+          yield
+        end
+      ensure
+        @logger_file = nil
+      end
+
       def define_agent(klass_name, methods)
         @agent_module = Module.new do
           include Agent
