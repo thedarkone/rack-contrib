@@ -8,7 +8,8 @@ module Rack
   #   config.middleware.use 'Rack::ThreadSafetyTester', :whitelist => {
   #     Hash => ['active_support/dependencies.rb'], # dev. mode related
   #     Set => 'active_support/dependencies.rb', # dev. mode related
-  #     Array => ['active_support/dependencies.rb'] # dev. mode related
+  #     Array => ['active_support/dependencies.rb'], # dev. mode related
+  #     :all => 'rspec/*' # ignore rspec
   #   },
   #   :skip_paths => [/\A\/assets\//] # skip /assets to keep things snappy
   #
@@ -169,6 +170,7 @@ module Rack
             if whitelist = whitelists[watcher.klass]
               watcher.whitelist!(whitelist)
             end
+            watcher.whitelist!(whitelists[:all])
           end
         end
       end
