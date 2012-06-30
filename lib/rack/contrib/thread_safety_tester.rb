@@ -163,6 +163,16 @@ module Rack
         end
       end
 
+      def self.whitelist!(whitelists)
+        if whitelists.kind_of?(Hash)
+          WATCHERS.each do |watcher|
+            if whitelist = whitelists[watcher.klass]
+              watcher.whitelist!(whitelist)
+            end
+          end
+        end
+      end
+
       private
       def ignorable?(obj)
         @ignorables.any? {|ignorable| ignorable.equal?(obj)}
@@ -174,14 +184,7 @@ module Rack
     def initialize(app, options = {})
       super()
       if options.kind_of?(Hash)
-        if (whitelists = options[:whitelist]).kind_of?(Hash)
-          WATCHERS.each do |watcher|
-            if whitelist = whitelists[watcher.klass]
-              watcher.whitelist!(whitelist)
-            end
-          end
-        end
-
+        Tester.whitelist!(options[:whitelist])
         if (skip_paths = options[:skip_paths]).present?
           @skip_paths = Array(skip_paths)
         end
